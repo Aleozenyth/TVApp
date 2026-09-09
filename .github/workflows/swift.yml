@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: swift build -v
+      run: cd TVApp/TVAppCore && swift build -v
     - name: Run tests
-      run: swift test -v
+      run: cd TVApp/TVAppCore && swift test -v
