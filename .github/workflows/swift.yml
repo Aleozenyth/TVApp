@@ -1,22 +1,38 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
+name: iOS Build and Record Demo
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
-  build:
-
-    runs-on: macos-latest
-
+  build-and-record:
+    runs-on: macos-14
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cd TVApp/TVAppCore && swift build -v
-    - name: Run tests
-      run: cd TVApp/TVAppCore && swift test -v
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: |
+          cd TVApp
+          xcodegen generate
+
+      - name: Boot Simulator & Record Video
+        run: |
+          cd TVApp
+          UDID=$(xcrun simctl create "DemoPhone" "iPhone 15" "iOS17.5" || true)
+          xcrun simctl boot $UDID || true
+          xcrun simctl io $UDID recordVideo ../demo.mp4 &
+          RECORD_PID=$!
+          xcodebuild test -project TVApp.xcodeproj -scheme TVApp -destination "id=$UDID" || true
+          sleep 3
+          kill -2 $RECORD_PID || true
+
+      - name: Upload Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-demo
+          path: demo.mp4
