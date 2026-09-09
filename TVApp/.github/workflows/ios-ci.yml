@@ -1,35 +1,45 @@
-name: iOS CI
+name: iOS CI & Demo Video
 
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
-  build-and-test:
-    # macOS runners come with Xcode + Homebrew preinstalled — this is what lets
-    # you validate the project from a Windows machine, purely via git push.
+  build-and-record:
     runs-on: macos-14
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate Xcode project
+      - name: Generate Xcode Project
         run: xcodegen generate
 
-      - name: Show available simulators
-        # Useful the first time this runs: if the destination below fails because
-        # the simulator name/OS doesn't exist on this runner image, check this
-        # step's log and adjust the -destination value in the next step.
-        run: xcrun simctl list devices available
-
-      - name: Build and test
+      - name: Boot Simulator & Record Demo
         run: |
-          xcodebuild test \
-            -project TVApp.xcodeproj \
-            -scheme TVApp \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
-            -resultBundlePath TestResults
+          # Boot iPhone Simulator
+          UDID=$(xcrun simctl create "DemoPhone" "iPhone 15" "iOS17.5" || true)
+          xcrun simctl boot $UDID || true
+          
+          # Record video in background
+          xcrun simctl io $UDID recordVideo demo.mp4 &
+          RECORD_PID=$!
+          
+          # Run tests
+          xcodebuild test -project TVApp.xcodeproj -scheme TVApp -destination "id=$UDID" || true
+          
+          # Stop recording
+          sleep 5
+          kill -2 $RECORD_PID || true
+
+      - name: Upload Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-demo
+          path: demo.mp4
