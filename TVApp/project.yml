@@ -1,0 +1,55 @@
+# XcodeGen spec — generates TVApp.xcodeproj from this file, so the .xcodeproj
+# itself never needs to be hand-crafted or committed to git (avoids merge-conflict-prone
+# binary/plist project files). Install: `brew install xcodegen` (Mac only).
+# Run:      `xcodegen generate`   -> produces TVApp.xcodeproj
+name: TVApp
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  # Local Swift Package with all Combine/SwiftUI-free logic (models, networking,
+  # HTML stripping). Also independently testable via `swift test` without Xcode —
+  # see TVAppCore/Package.swift and README.md.
+  TVAppCore:
+    path: TVAppCore
+targets:
+  TVApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: TVApp
+    dependencies:
+      - package: TVAppCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.TVApp
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+  TVAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: TVAppTests
+    dependencies:
+      - target: TVApp
+      - package: TVAppCore
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  TVApp:
+    build:
+      targets:
+        TVApp: all
+        TVAppTests: [test]
+    test:
+      config: Debug
+      targets:
+        - TVAppTests
+    run:
+      config: Debug

@@ -1,0 +1,25 @@
+name: TVAppCore CI (free on any repo)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  swift-test:
+    # Standard Ubuntu runners are free/generously included on every GitHub plan,
+    # private repos included — unlike the macOS runner used in ios-ci.yml, this
+    # workflow never touches your minutes quota in any meaningful way and needs
+    # no repo-visibility trick to stay free.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.10"
+
+      - name: Run TVAppCore tests
+        working-directory: TVAppCore
+        run: swift test
